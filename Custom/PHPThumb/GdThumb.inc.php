@@ -678,6 +678,57 @@ class GdThumb extends ThumbBase
 		
 		return $this;
 	}
+        
+        
+        public function saveGray ($fileName, $format = null)
+	{
+		$validFormats = array('GIF', 'JPG', 'PNG');
+		$format = ($format !== null) ? strtoupper($format) : $this->format;
+		
+		if (!in_array($format, $validFormats))
+		{
+			throw new InvalidArgumentException ('Invalid format type specified in save function: ' . $format);
+		}
+		
+		// make sure the directory is writeable
+		if (!is_writeable(dirname($fileName)))
+		{
+			// try to correct the permissions
+			if ($this->options['correctPermissions'] === true)
+			{
+				@chmod(dirname($fileName), 0777);
+				
+				// throw an exception if not writeable
+				if (!is_writeable(dirname($fileName)))
+				{
+					throw new RuntimeException ('File is not writeable, and could not correct permissions: ' . $fileName);
+				}
+			}
+			// throw an exception if not writeable
+			else
+			{
+				throw new RuntimeException ('File not writeable: ' . $fileName);
+			}
+		}
+		
+		switch ($format) 
+		{
+			case 'GIF':
+                                $this->grayImages ();
+				imagegif($this->oldImage, $fileName);
+				break;
+			case 'JPG':
+                                $this->grayImages ();
+				imagejpeg($this->oldImage, $fileName, $this->options['jpegQuality']);
+				break;
+			case 'PNG':
+                                $this->grayImages ();
+				imagepng($this->oldImage, $fileName);
+				break;
+		}
+		
+		return $this;
+	}
 	
 	#################################
 	# ----- GETTERS / SETTERS ----- #
@@ -1182,4 +1233,21 @@ class GdThumb extends ThumbBase
 			imagetruecolortopalette($this->workingImage, true, 256);
 		}
 	}
+        
+        /**
+         * 将图片变成灰色
+         */
+        protected function grayImages ()
+        {
+            if (imageistruecolor($this->oldImage)) 
+            {
+                imagetruecolortopalette($this->oldImage, false, 256);//如果是真彩色图象，将真彩色图像转换为调色板图像
+            }
+            for ($i = 0; $i < imagecolorstotal($this->oldImage);/*获得调色板中颜色的数目*/ $i++)
+            {
+                $rgb = imagecolorsforindex($this->oldImage, $i);//获得颜色i点的颜色值
+                $gray = round(0.229 * $rgb['red'] + 0.587 * $rgb['green'] + 0.114 * $rgb['blue']);//获得颜色灰度值
+                imagecolorset($this->oldImage, $i, $gray, $gray, $gray);//设置i点颜色值
+            }
+        }
 }
